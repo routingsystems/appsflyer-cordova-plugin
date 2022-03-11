@@ -37,11 +37,12 @@ static BOOL isOriginalOpenURLOptionsExist;
 
 #else
 #pragma mark - AppDelegate Deep Link implementation
-- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
-    [self afLogger:@"[AppsFlyer Category] `application:openURL:options:`"];
-    [[AppsFlyerAttribution shared] handleOpenUrl:url options:options];
-    return YES;
-}
+// Commented out original implementation due to incompatibility with Auth0 cordova plugin
+// - (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
+//     [self afLogger:@"[AppsFlyer Category] `application:openURL:options:`"];
+//     [[AppsFlyerAttribution shared] handleOpenUrl:url options:options];
+//     return YES;
+// }
 
 - (BOOL)application:(UIApplication *)application continueUserActivity:(NSUserActivity *)userActivity restorationHandler:(void (^)(NSArray<id<UIUserActivityRestoring>> * _Nullable))restorationHandler {
     [self afLogger:@"[AppsFlyer Category] `application:continueUserActivity:restorationHandler:`"];
