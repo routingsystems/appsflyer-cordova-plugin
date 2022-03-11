@@ -37,6 +37,10 @@
   "homepage": "https://github.com/AppsFlyerSDK/cordova-plugin-appsflyer-sdk#readme",
   "scripts": {
     "test": "npm run jshint",
+    "commit": "git add --all && git-cz --no-verify",
+    "patch": "standard-version --release-as patch",
+    "minor": "standard-version --release-as minor",
+    "major": "standard-version --release-as major",
     "jshint": "node node_modules/jshint/bin/jshint www && node node_modules/jshint/bin/jshint src && node node_modules/jshint/bin/jshint tests",
     "setupIonicCordova": "cd examples/ionic-cordova; npm install; ionic cordova plugin rm cordova-plugin-appsflyer-sdk --save; ionic cordova platform rm android; ionic cordova platform rm ios; ionic cordova plugin add cordova-plugin-appsflyer-sdk --save; ionic cordova platform add android; ionic cordova platform add ios",
     "runIonicCordovaIos": "cd examples/ionic-cordova; ionic cordova prepare ios; ionic cordova run ios;",
@@ -45,8 +49,13 @@
     "runCordovaIos": "cd examples/cordova; cordova prepare ios; cordova run ios;",
     "runCordovaAndroid": "cd examples/cordova; cordova prepare android; cordova run android;"
   },
-  "devDependencies": {
-    "jshint": "^2.6.0"
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
   },
-  "dependencies": {}
+  "devDependencies": {
+    "cz-conventional-changelog": "^3.3.0",
+    "jshint": "^2.6.0"
+  }
 }
