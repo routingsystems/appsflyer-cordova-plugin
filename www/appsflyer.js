@@ -11,9 +11,69 @@ if (!window.CustomEvent) {
     };
 }
 
+
+
 (function (global) {
+
+    // Enum definition for MediationNetwork
+    global.MediationNetwork = Object.freeze({
+        IRONSOURCE: "ironsource",
+        APPLOVIN_MAX: "applovinmax",
+        GOOGLE_ADMOB: "googleadmob",
+        FYBER: "fyber",
+        APPODEAL: "appodeal",
+        ADMOST: "Admost",
+        TOPON: "Topon",
+        TRADPLUS: "Tradplus",
+        YANDEX: "Yandex",
+        CHARTBOOST: "chartboost",
+        UNITY: "Unity",
+        TOPON_PTE: "toponpte",
+        CUSTOM_MEDIATION: "customMediation",
+        DIRECT_MONETIZATION_NETWORK: "directMonetizationNetwork"
+    });
+
+
     var AppsFlyer = function () {
     };
+
+    // Expose AppsFlyerConsent to the global scope
+    /**
+     * @class AppsFlyerConsent
+     * @constructor
+     * @param {boolean|null} isUserSubjectToGDPR - Indicates if the user is subject to GDPR.
+     * @param {boolean|null} hasConsentForDataUsage - User's consent for data usage.
+     * @param {boolean|null} hasConsentForAdsPersonalization - User's consent for ads personalization.
+     * @param {boolean|null} hasConsentForAdStorage - User's consent for ad storage.
+     */
+    function AppsFlyerConsent(isUserSubjectToGDPR, hasConsentForDataUsage, hasConsentForAdsPersonalization, hasConsentForAdStorage) {
+        this.isUserSubjectToGDPR = isUserSubjectToGDPR;
+        this.hasConsentForDataUsage = hasConsentForDataUsage;
+        this.hasConsentForAdsPersonalization = hasConsentForAdsPersonalization;
+        this.hasConsentForAdStorage = hasConsentForAdStorage;
+    }
+
+    /**
+     * @deprecated Use the constructor directly with four parameters instead.
+     * Factory method for GDPR user.
+     */
+    AppsFlyerConsent.forGDPRUser = function (hasConsentForDataUsage, hasConsentForAdsPersonalization) {
+        window.console.warn("[DEPRECATED] 'forGDPRUser' is deprecated. Use 'new AppsFlyerConsent' instead.");
+        return new AppsFlyerConsent(true, hasConsentForDataUsage, hasConsentForAdsPersonalization, null);
+    };
+
+    /**
+     * @deprecated Use the constructor directly with four parameters instead.
+     * Factory method for non-GDPR user.
+     */
+    AppsFlyerConsent.forNonGDPRUser = function () {
+        window.console.warn("[DEPRECATED] 'forNonGDPRUser' is deprecated. Use 'new AppsFlyerConsent' instead.");
+        return new AppsFlyerConsent(false, null, null, null);
+    };
+
+    // Expose AppsFlyerConsent to the global scope
+    global.AppsFlyerConsent = AppsFlyerConsent;
+
 
     /**
      * initialize the SDK.
@@ -28,13 +88,17 @@ if (!window.CustomEvent) {
                 errorCB(AppsFlyerError.INVALID_ARGUMENT_ERROR);
             }
         } else {
-            if (args.appId !== undefined && typeof args.appId != 'string') {
+            if (args.appId !== undefined && (typeof args.appId != 'string' || args.appId === "")) {
                 if (errorCB) {
                     errorCB(AppsFlyerError.APPID_NOT_VALID);
                 }
             } else if (args.devKey !== undefined && typeof args.devKey != 'string') {
                 if (errorCB) {
                     errorCB(AppsFlyerError.DEVKEY_NOT_VALID);
+                }
+            } else if (args.devKey === undefined || args.devKey === "") {
+                if (errorCB) {
+                    errorCB(AppsFlyerError.NO_DEVKEY_FOUND);
                 }
             } else {
                 exec(successCB, errorCB, 'AppsFlyerPlugin', 'initSdk', [args]);
@@ -43,6 +107,14 @@ if (!window.CustomEvent) {
                 callbackMap.convErr = errorCB;
             }
         }
+    };
+
+    /**
+     * starts the SDK.
+     *
+     */
+    AppsFlyer.prototype.startSdk = function () {
+        exec(null, null, 'AppsFlyerPlugin', 'startSdk', []);
     };
 
     /**
@@ -73,6 +145,14 @@ if (!window.CustomEvent) {
     AppsFlyer.prototype.setCurrencyCode = function (currencyId) {
         argscheck.checkArgs('S', 'AppsFlyer.setCurrencyCode', arguments);
         exec(null, null, 'AppsFlyerPlugin', 'setCurrencyCode', [currencyId]);
+    };
+
+    /**
+     * Public API - logAdRevenue function
+     */
+    AppsFlyer.prototype.logAdRevenue = function(afAdRevenueData, additionalParameters) {
+        argscheck.checkArgs('OO', 'AppsFlyer.logAdRevenue', arguments);
+        exec(null, null, 'AppsFlyerPlugin', 'logAdRevenue', [afAdRevenueData, additionalParameters]);
     };
 
     /**
@@ -365,12 +445,47 @@ if (!window.CustomEvent) {
 
     /**
      * The setPartnerData API allows sending custom data for partner integration purposes.
+     *
      * Typically it is used to integrate on the SDK level with several external partner platforms
      * @param partnerId - ID of the partner (usually suffixed with "_int")
      * @param data - Customer data, depends on the integration configuration with the specific partner
      */
     AppsFlyer.prototype.setPartnerData = function (partnerId, data){
         exec(null, null, 'AppsFlyerPlugin', 'setPartnerData', [partnerId, data]);
+    };
+
+    /**
+     * Measure and get data from push-notification campaigns.
+     * @param pushData - JSON object contains the push data
+     */
+    AppsFlyer.prototype.sendPushNotificationData = function (pushData){
+        exec(null, null, 'AppsFlyerPlugin', 'sendPushNotificationData', [pushData]);
+    };
+
+    /**
+     * Use to opt-out of collecting the network operator name (carrier) and sim operator name from the device.
+     * @param disable - Defaults to false
+     */
+    AppsFlyer.prototype.setDisableNetworkData = function (disable){
+        exec(null, null, 'AppsFlyerPlugin', 'setDisableNetworkData', [disable]);
+    };
+
+    /**
+     * Use to manually collecting the consent data from the user.
+     * @param appsFlyerConsent - object of AppsFlyerConsent that holds three values when GDPR is applies to the user, and one value when It's not.
+     * when GDPR applies to the user and your app does not use a CMP compatible with TCF v2.2, use this API to provide the consent data directly to the SDK.<br>
+     */
+    AppsFlyer.prototype.setConsentData = function (appsFlyerConsent){
+        exec(null, null, 'AppsFlyerPlugin', 'setConsentData', [appsFlyerConsent]);
+    };
+
+    /**
+     * set collect tcf data or not.
+     *
+     * @param enable - boolean value that represent if enables to collect or not.
+     */
+    AppsFlyer.prototype.enableTCFDataCollection = function (enable) {
+        exec(null, null, 'AppsFlyerPlugin', 'enableTCFDataCollection', [enable]);
     };
 
     module.exports = new AppsFlyer();

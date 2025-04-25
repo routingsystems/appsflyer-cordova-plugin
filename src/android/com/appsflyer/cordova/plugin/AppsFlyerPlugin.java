@@ -11,6 +11,7 @@ import static com.appsflyer.cordova.plugin.AppsFlyerConstants.AF_IS_DEBUG;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.AF_ON_APP_OPEN_ATTRIBUTION;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.AF_ON_ATTRIBUTION_FAILURE;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.AF_ON_DEEP_LINKING;
+import static com.appsflyer.cordova.plugin.AppsFlyerConstants.SHOULD_START_SDK;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.AF_ON_INSTALL_CONVERSION_DATA_LOADED;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.AF_ON_INSTALL_CONVERSION_FAILURE;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.AF_SUCCESS;
@@ -23,6 +24,7 @@ import static com.appsflyer.cordova.plugin.AppsFlyerConstants.INVITE_DEEPLINK;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.INVITE_FAIL;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.INVITE_IMAGEURL;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.INVITE_REFERRER;
+import static com.appsflyer.cordova.plugin.AppsFlyerConstants.INVITE_BRAND_DOMAIN;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.NO_CUSTOMER_ID;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.NO_DEVKEY_FOUND;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.NO_EVENT_NAME_FOUND;
@@ -36,13 +38,15 @@ import static com.appsflyer.cordova.plugin.AppsFlyerConstants.SIGNATURE;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.SUCCESS;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.VALIDATE_FAILED;
 import static com.appsflyer.cordova.plugin.AppsFlyerConstants.VALIDATE_SUCCESS;
+import static com.appsflyer.cordova.plugin.AppsFlyerConstants.PLUGIN_VERSION;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.support.annotation.NonNull;
+import android.os.Bundle;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 import com.appsflyer.AppsFlyerConversionListener;
 import com.appsflyer.AppsFlyerInAppPurchaseValidatorListener;
@@ -55,6 +59,11 @@ import com.appsflyer.deeplink.DeepLinkResult;
 import com.appsflyer.share.CrossPromotionHelper;
 import com.appsflyer.share.LinkGenerator;
 import com.appsflyer.share.ShareInviteHelper;
+import com.appsflyer.internal.platform_extension.Plugin;
+import com.appsflyer.internal.platform_extension.PluginInfo;
+import com.appsflyer.AppsFlyerConsent;
+import com.appsflyer.MediationNetwork;
+import com.appsflyer.AFAdRevenueData;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaInterface;
@@ -76,7 +85,6 @@ public class AppsFlyerPlugin extends CordovaPlugin {
     private CallbackContext mDeepLinkListener = null;
     private CallbackContext mInviteListener = null;
     private Uri intentURI = null;
-    private Activity c;
 
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
@@ -100,7 +108,7 @@ public class AppsFlyerPlugin extends CordovaPlugin {
      * @throws JSONException
      */
     @Override
-    public boolean execute(final String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+    public boolean execute(final String action, JSONArray args, CallbackContext callbackContext) {
         Log.d("AppsFlyer", "Executing...");
         if ("setCurrencyCode".equals(action)) {
             return setCurrencyCode(args);
@@ -118,6 +126,8 @@ public class AppsFlyerPlugin extends CordovaPlugin {
             return stop(args);
         } else if ("initSdk".equals(action)) {
             return initSdk(args, callbackContext);
+        } else if ("startSdk".equals(action)) {
+            return startSdk();
         } else if ("logEvent".equals(action)) {
             return logEvent(args, callbackContext);
         } else if ("updateServerUninstallToken".equals(action)) {
@@ -160,9 +170,144 @@ public class AppsFlyerPlugin extends CordovaPlugin {
             return setAdditionalData(args);
         } else if ("setPartnerData".equals(action)) {
             return setPartnerData(args);
+        } else if ("sendPushNotificationData".equals(action)) {
+            return sendPushNotificationData(args);
+        } else if ("setDisableNetworkData".equals(action)) {
+            return setDisableNetworkData(args);
+        } else if ("setConsentData".equals(action)) {
+            return setConsentData(args);
+        } else if ("enableTCFDataCollection".equals(action)) {
+            return enableTCFDataCollection(args);
+        } else if ("logAdRevenue".equals(action)) {
+            return logAdRevenue(args);
+        }
+        return false;
+    }
+
+        /**
+         * log AdRevenue event
+         *
+         * @param args - event params
+         * @return true
+         */
+        private boolean logAdRevenue(JSONArray args) {
+            cordova.getThreadPool().execute(() -> {
+                Map<String, Object> additionalParameters = null;
+                try {
+                    if(!args.get(0).equals(null)){
+                        JSONObject afAdRevenueDataJsonObj = args.getJSONObject(0);
+                        String monetizationNetwork = afAdRevenueDataJsonObj.optString("monetizationNetwork", null);
+                        String mediationNetwork = afAdRevenueDataJsonObj.optString("mediationNetwork", null);
+                        String currencyIso4217Code = afAdRevenueDataJsonObj.optString("currencyIso4217Code", null);
+                        double revenue = afAdRevenueDataJsonObj.optDouble("revenue", -1);
+                        MediationNetwork mediationNetworkEnumVal = null;
+
+                        if(mediationNetwork != null){
+                            for(MediationNetwork mediationNetworkEnum: MediationNetwork.values()){
+                                if(mediationNetworkEnum.getValue().equals(mediationNetwork)){
+                                    mediationNetworkEnumVal = mediationNetworkEnum;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if(!args.get(1).equals(null)){
+                            JSONObject additionalParametersJson = args.getJSONObject(1);
+                            additionalParameters = toObjectMap(additionalParametersJson);
+                        }
+                        if(mediationNetworkEnumVal != null){
+                            AFAdRevenueData afAdRevenueData = new AFAdRevenueData(monetizationNetwork, mediationNetworkEnumVal, currencyIso4217Code, revenue);
+                            AppsFlyerLib.getInstance().logAdRevenue(afAdRevenueData, additionalParameters);
+                        }
+                        else{
+                           Log.d("AppsFlyer", "Could not log Ad-Revenue event, bad inputs");
+                        }
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            });
+            return true;
         }
 
-        return false;
+    /**
+     * set consent data according to GDPR if applies or not.
+     *
+     * @param args - json object that represents consent data object.
+     * @return true
+     */
+    private boolean setConsentData(JSONArray args) {
+        cordova.getThreadPool().execute(() -> {
+            try {
+                JSONObject consentData = args.getJSONObject(0);
+                Boolean isUserSubjectToGDPR = getBooleanOrNull(consentData, "isUserSubjectToGDPR");
+                Boolean hasConsentForDataUsage = getBooleanOrNull(consentData, "hasConsentForDataUsage");;
+                Boolean hasConsentForAdsPersonalization = getBooleanOrNull(consentData, "hasConsentForAdsPersonalization");;
+                Boolean hasConsentForAdStorage = getBooleanOrNull(consentData, "hasConsentForAdStorage");;
+
+                AppsFlyerConsent consent = new AppsFlyerConsent(isUserSubjectToGDPR, hasConsentForDataUsage, hasConsentForAdsPersonalization, hasConsentForAdStorage);
+                AppsFlyerLib.getInstance().setConsentData(consent);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        });
+        return true;
+    }
+
+    private Boolean getBooleanOrNull(JSONObject consentData, String key) {
+        try {
+            return consentData.getBoolean(key);
+        } catch (Throwable ignore) {}
+        return null;
+    }
+
+    /**
+     * set collect tcf data or not.
+     *
+     * @param args - json object that holds the boolean value.
+     * @return true
+     */
+    private boolean enableTCFDataCollection(JSONArray args) {
+        cordova.getThreadPool().execute(() -> {
+            try {
+                boolean enable = args.getBoolean(0);
+                AppsFlyerLib.getInstance().enableTCFDataCollection(enable);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+        });
+        return true;
+    }
+
+    private boolean setDisableNetworkData(JSONArray args) {
+        cordova.getThreadPool().execute(() -> {
+            try {
+                boolean disable = args.getBoolean(0);
+                AppsFlyerLib.getInstance().setDisableNetworkData(disable);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+        });
+        return true;
+    }
+
+    private boolean sendPushNotificationData(JSONArray args) {
+        cordova.getThreadPool().execute(() -> {
+            try {
+                JSONObject js = args.getJSONObject(0);
+                Intent i = cordova.getActivity().getIntent();
+                if (i != null) {
+                    i.putExtras(jsonToBundle(js));
+                    cordova.getActivity().setIntent(i);
+                    AppsFlyerLib.getInstance().sendPushNotificationData(cordova.getActivity());
+                }
+            } catch (JSONException e) {
+                Log.d("AppsFlyer", "Could not parse json to bundle");
+            }
+        });
+        return true;
     }
 
     /**
@@ -196,9 +341,7 @@ public class AppsFlyerPlugin extends CordovaPlugin {
      * @return
      */
     private boolean registerDeepLink(CallbackContext callbackContext) {
-        if (mDeepLinkListener == null) {
-            mDeepLinkListener = callbackContext;
-        }
+        mDeepLinkListener = callbackContext;
         return true;
     }
 
@@ -210,9 +353,7 @@ public class AppsFlyerPlugin extends CordovaPlugin {
      * @return
      */
     private boolean registerOnAppOpenAttribution(final CallbackContext callbackContext) {
-        if (mAttributionDataListener == null) {
-            mAttributionDataListener = callbackContext;
-        }
+        mAttributionDataListener = callbackContext;
         return true;
     }
 
@@ -224,75 +365,73 @@ public class AppsFlyerPlugin extends CordovaPlugin {
      *                        errorCB: Error callback - called when error occurs during initialization.
      */
     private boolean initSdk(final JSONArray args, final CallbackContext callbackContext) {
-        String devKey = null;
-        boolean isConversionData;
-        boolean isDebug = false;
-        boolean isDeepLinking;
-        AppsFlyerConversionListener gcdListener = null;
-
-        AppsFlyerProperties.getInstance().set(AppsFlyerProperties.LAUNCH_PROTECT_ENABLED, false);
-        AppsFlyerLib instance = AppsFlyerLib.getInstance();
-        c = this.cordova.getActivity();
 
         try {
             final JSONObject options = args.getJSONObject(0);
 
-            devKey = options.optString(AF_DEV_KEY, "");
-            isConversionData = options.optBoolean(AF_CONVERSION_DATA, false);
-
+            // assert if AF_DEV_KEY is null/empty string
+            String devKey = options.optString(AF_DEV_KEY, "");
             if (devKey.trim().equals("")) {
                 callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, NO_DEVKEY_FOUND));
             }
 
-            isDebug = options.optBoolean(AF_IS_DEBUG, false);
+            // assign some values
+            AppsFlyerConversionListener gcdListener = null;
+            AppsFlyerProperties.getInstance().set(AppsFlyerProperties.LAUNCH_PROTECT_ENABLED, false);
+            AppsFlyerLib instance = AppsFlyerLib.getInstance();
+            boolean isConversionData = options.optBoolean(AF_CONVERSION_DATA, false);
+            boolean isDebug = options.optBoolean(AF_IS_DEBUG, false);
+            boolean isDeepLinking = options.optBoolean(AF_ON_DEEP_LINKING, false);
+            boolean shouldStartSDK = options.optBoolean(SHOULD_START_SDK, true);
 
+            // trigger some setters
             if (options.has(AF_COLLECT_ANDROID_ID)) {
                 AppsFlyerLib.getInstance().setCollectAndroidID(options.optBoolean(AF_COLLECT_ANDROID_ID, true));
             }
             if (options.has(AF_COLLECT_IMEI)) {
                 AppsFlyerLib.getInstance().setCollectIMEI(options.optBoolean(AF_COLLECT_IMEI, true));
             }
-            isDeepLinking = options.optBoolean(AF_ON_DEEP_LINKING, false);
             if (isDeepLinking) {
                 instance.subscribeForDeepLink(registerDeepLinkListener());
             }
 
+            setPluginInfo();
             instance.setDebugLog(isDebug);
 
-            if (isDebug == true) {
+            if (isDebug) {
                 Log.d("AppsFlyer", "Starting Tracking");
             }
 
-            if (isConversionData == true) {
+            if (isConversionData) {
 
                 if (mConversionListener == null) {
                     mConversionListener = callbackContext;
                 }
 
                 gcdListener = registerConversionListener(instance);
-            } else {
-                //callbackContext.success(SUCCESS);
+
             }
+            // init appsflyerSDK
             instance.init(devKey, gcdListener, cordova.getActivity());
 
-            if (mConversionListener == null) {
-                instance.start(c, devKey, new AppsFlyerRequestListener() {
-                    @Override
-                    public void onSuccess() {
-                        callbackContext.success(SUCCESS);
-                    }
+            if(shouldStartSDK){
+                if (mConversionListener == null) {
+                    instance.start(cordova.getActivity(), devKey, new AppsFlyerRequestListener() {
+                        @Override
+                        public void onSuccess() {
+                            callbackContext.success(SUCCESS);
+                        }
 
-                    @Override
-                    public void onError(int i, String s) {
-                        callbackContext.error(FAILURE);
-                    }
-                });
-            } else {
-                instance.start(c);
+                        @Override
+                        public void onError(int i, String s) {
+                            callbackContext.error(FAILURE);
+                        }
+                    });
+                }
+                else{
+                     startSdk();
+                }
             }
-
-            instance.start(c);
-
             if (gcdListener != null) {
                 sendPluginNoResult(callbackContext);
             } else {
@@ -302,6 +441,15 @@ public class AppsFlyerPlugin extends CordovaPlugin {
             e.printStackTrace();
         }
 
+        return true;
+    }
+
+    /**
+     * start the SDK.
+     */
+    private boolean startSdk() {
+        AppsFlyerLib instance = AppsFlyerLib.getInstance();
+        instance.start(cordova.getActivity());
         return true;
     }
 
@@ -681,6 +829,7 @@ public class AppsFlyerPlugin extends CordovaPlugin {
         String referrerImageUrl = null;
         String customerID = null;
         String baseDeepLink = null;
+        String brandDomain = null;
 
         try {
             final JSONObject options = args.getJSONObject(0);
@@ -691,6 +840,7 @@ public class AppsFlyerPlugin extends CordovaPlugin {
             referrerImageUrl = options.optString(INVITE_IMAGEURL, "");
             customerID = options.optString(INVITE_CUSTOMERID, "");
             baseDeepLink = options.optString(INVITE_DEEPLINK, "");
+            brandDomain = options.optString(INVITE_BRAND_DOMAIN, "");
 
             Context context = this.cordova.getActivity().getApplicationContext();
             LinkGenerator linkGenerator = ShareInviteHelper.generateInviteUrl(context);
@@ -712,6 +862,9 @@ public class AppsFlyerPlugin extends CordovaPlugin {
             }
             if (baseDeepLink != null && baseDeepLink != "") {
                 linkGenerator.setBaseDeeplink(baseDeepLink);
+            }
+            if (brandDomain != null && brandDomain != "") {
+                linkGenerator.setBrandDomain(brandDomain);
             }
 
             if (options.length() > 1 && !options.get("userParams").equals("")) {
@@ -1107,6 +1260,11 @@ public class AppsFlyerPlugin extends CordovaPlugin {
         return true;
     }
 
+    private void setPluginInfo(){
+        PluginInfo pluginInfo = new PluginInfo(Plugin.CORDOVA, PLUGIN_VERSION);
+        AppsFlyerLib.getInstance().setPluginInfo(pluginInfo);
+    }
+
     /**
      * takes string representation of a string array and converts it to an array. use this method because old version of cordova cannot pass an array to native.
      * newer versions can, but can break flow to older users
@@ -1194,5 +1352,39 @@ public class AppsFlyerPlugin extends CordovaPlugin {
         return map;
     }
 
-
+    private Bundle jsonToBundle(JSONObject json) throws JSONException {
+        Bundle bundle = new Bundle();
+        Iterator<String> iterator = json.keys();
+        while (iterator.hasNext()) {
+            String key = iterator.next();
+            Object value = json.get(key);
+            switch (value.getClass().getSimpleName()) {
+                case "String":
+                    bundle.putString(key, (String) value);
+                    break;
+                case "Integer":
+                    bundle.putInt(key, (Integer) value);
+                    break;
+                case "Long":
+                    bundle.putLong(key, (Long) value);
+                    break;
+                case "Boolean":
+                    bundle.putBoolean(key, (Boolean) value);
+                    break;
+                case "JSONObject":
+                    bundle.putBundle(key, jsonToBundle((JSONObject) value));
+                    break;
+                case "Float":
+                    bundle.putFloat(key, (Float) value);
+                    break;
+                case "Double":
+                    bundle.putDouble(key, (Double) value);
+                    break;
+                default:
+                    bundle.putString(key, value.getClass().getSimpleName());
+            }
+        }
+        return bundle;
+        
+    }
 }

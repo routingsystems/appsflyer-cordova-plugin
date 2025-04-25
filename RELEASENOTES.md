@@ -1,3 +1,90 @@
+## 6.16.2
+ Release date: *2025-03-19*
+
+- Cordova >> Update Plugin to v6.16.2
+- Updates to AppsFlyerConsent objects used for providing user consent manually.
+
+## 6.15.3
+ Release date: *2024-12-02*
+
+- Cordova >> Update Plugin to v6.15.3
+
+## 6.15.11
+ Release date: *2024-09-03*
+- Cordova >> Fix chartboost adrevenue enum typo in ios side
+
+## 6.15.1
+ Release date: *2024-09-02*
+
+- Cordova >> Update Plugin to v6.15.1
+
+## 6.14.3
+ Release date: *2024-04-30*
+
+- Cordova >> Update Plugin to v6.14.1
+
+## 6.13.1
+ Release date: *2024-03-06*
+
+- Release Cordova 6.13.1-rc1
+
+## 6.13.0
+ Release date: *2024-02-25*
+
+- Cordova >> Update Plugin to v6.13.0 (DMA)
+- Cordova > Android > registerDeepLink API works only once on MFE architecture due to null check
+
+## 6.13.0
+ Release date: *2024-02-25*
+
+- Cordova >> Update Plugin to v6.13.0 (DMA)
+- Cordova > Android > registerDeepLink API works only once on MFE architecture due to null check
+
+## 6.12.2
+ Release date: *2023-08-23*
+
+- Cordova plugin >> Update Plugin to v6.12.2
+
+## 6.12.10
+ Release date: *2023-07-17*
+
+- Cordova >> Update Plugin to v6.12.10
+
+## 6.12.1
+ Release date: *2023-07-17*
+
+- Cordova >> Update Plugin to v6.12.1
+
+## 6.10.31
+ Release date: *2023-06-21*
+
+- Cordova >> Release 6.10.31
+- Cordova Plugin >> Android >> plugin.xml file settings doesn't merge <uses-permission> tag in App's AndroidManifest.xml 
+- Cordova Plugin >> User Invite >> Brand domain setup is not supported
+
+## 6.10.3
+ Release date: *2023-05-10*
+
+- Cordova >> Update Plugin to v6.10.3
+
+## 6.10.3
+ Release date: *2023-05-10*
+
+- Cordova >> Update Plugin to v6.10.3
+
+## 6.8.2
+ Release date: *2022-08-30*
+
+- Cordova > update android native SDK to v6.8.2
+
+## 6.8.0
+ Release date: *2022-07-20*
+
+- Cordova >> update SDKs versions 6.8.0
+- Cordova >> Android >> add `setDisableNetworkData` API
+- Cordova Plugin >> add support for the handlePushNotificationData API
+- Update Cordova Plugin to v6.8.0
+
 # Release Notes
 ### 6.4.4
 Release date: *2021-Dec-14* 

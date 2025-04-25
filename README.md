@@ -22,7 +22,10 @@ This plugin is not 100% compatible for use with Capacitor! To use this plugin wi
 - Cordova AppsFlyer plugin version **4.4.0** and higher are meant to be used with **cordova-android@7.0.0** and up <br>  
 For lower versions of cordova-android please use plugin version 4.3.3 available @ https://github.com/AppsFlyerSDK/cordova-plugin-appsflyer-sdk/tree/4.3.3 <br>  
 - From version **6.1.10** the plugin uses cocoapods(NOT StaticLib) in order to support iOS app-kids Strict mode. <br>  
-You can read more [here](https://support.appsflyer.com/hc/en-us/articles/207032066#integration-strict-mode-sdk)  
+You can read more [here](https://support.appsflyer.com/hc/en-us/articles/207032066#integration-strict-mode-sdk)
+- From version **6.10.2** the plugin requires using the implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.6.20' in Android.
+- From version **6.14.3** the plugin requires Target version 12 and higher in iOS.
+- From version **6.15.11** the plugin requires adding the value '/usr/lib/swift' to Build Settings 'RunPath Search Paths' key in iOS.
 ----------  
 
   
@@ -41,9 +44,22 @@ You can read more [here](https://support.appsflyer.com/hc/en-us/articles/2070320
   
 ### <a id="plugin-build-for"> This plugin is built for  
   
-- iOS AppsFlyerSDK **v6.5.2**  
-- Android AppsFlyerSDK **v6.5.2**  
+- iOS AppsFlyerSDK **v6.16.2**  
+- Android AppsFlyerSDK **v6.16.2**
+
+### <a id="breakingChanges"> ❗v6.15.11 Breaking Changes
+
+iOS platform:
+The plugin requires adding the value '/usr/lib/swift' to Build Settings 'RunPath Search Paths' key in iOS, Otherwise there might be some compilation errors.
   
+### <a id="breakingChanges"> ❗v6.14.3 Breaking Changes  
+
+Android platform: 
+In order to receive data regarding install-referrer from AppGallery now, there is a need to add implementation to the gradle file. <br>
+following the instructions in [this](https://dev.appsflyer.com/hc/docs/install-android-sdk#huawei-install-referrer) link. <br>
+please follow also these Cordova doc guidlines [here](https://cordova.apache.org/docs/en/11.x/guide/platforms/android/#extending-buildgradle).
+
+
 ### <a id="breakingChanges"> ❗v6 Breaking Changes  
   
 We have renamed the following APIs:  
@@ -62,11 +78,17 @@ We have renamed the following APIs:
 ```  
 $ cordova plugin add cordova-plugin-appsflyer-sdk  
 ```  
-  
 To install cordova manually check out the doc [here](/docs/Installation.md).  
   
 > **_NOTE:_** for Ionic installation see [this](#ionic) section  
+
   
+## ⚠️ Adding AD_ID permission for Android ⚠️
+In v6.8.0 of the AppsFlyer SDK, we added the normal permission `com.google.android.gms.permission.AD_ID` to the SDK's AndroidManifest, 
+to allow the SDK to collect the Android Advertising ID on apps targeting API 33.
+If your app is targeting children, you need to revoke this permission to comply with Google's Data policy.
+You can read more about it [here](https://dev.appsflyer.com/hc/docs/install-android-sdk#the-ad_id-permission). </br>
+
 ## <a id="appKids">👨‍👩‍👧‍👦 Add or Remove Strict mode for App-kids  
 Starting from version **6.1.10** iOS SDK comes in two variants: **Strict** mode and **Regular** mode. Please read more [here](https://support.appsflyer.com/hc/en-us/articles/207032066#integration-strict-mode-sdk)  
 ***Change to Strict mode***<br>  
@@ -100,6 +122,7 @@ Great installation and setup guides can be viewed [here](/docs/Guides.md).
 - [Deeplinking Guide](/docs/Guides.md#deeplinking)  
 - [Uninstall Guide](/docs/Guides.md#uninstall)  
 - [Set plugin for IOS 14](/docs/Guides.md#ios14)  
+- [Send SKAN postback copies for IOS 15](/docs/Guides.md#skanPostback)  
   
   
 ## <a id="setup"> 🚀 Setup  
@@ -140,8 +163,7 @@ Check out our Sample-App  **Let's cook!** [here](https://github.com/AppsFlyerSDK
 ***NOTICE!*** In AppsFlyer Cordova plugin version 6.x.x we replaced the word ``track`` with ``log`` from all our api but Ionic-Navite Appsflyer plugin still uses ``track``<br>  
 So the latest version that can work with Ionic-Native for now is **5.4.30**<br>  
   
-In case you are using Ionic framework, you have 2 options:  
-###  1. Using the `window` object directly  
+###  Using the `window` object directly  
 Install the cordova plugin:  
 ```  
 $ ionic cordova plugin add cordova-plugin-appsflyer-sdk  
@@ -164,56 +186,5 @@ export class HomePage {
  }); }}  
 ```  
   
-### 2 - Using Ionic native plugin  
-####  Ionic 4  and 5
-run this commands:  
-**With Cordova**:  
-```  
-$ ionic cordova plugin add cordova-plugin-appsflyer-sdk  
-$ npm install @ionic-native/appsflyer  
-```  
-**With Capacitor**:  
-* Please see [this note](#capacitornote)
-```  
-$ npm install cordova-plugin-appsflyer-sdk  
-$ npm install @ionic-native/appsflyer  
-ionic cap sync  
-```  
-Then add the following to `app.module.ts`  
-```  
-import { Appsflyer } from "@ionic-native/appsflyer/ngx";  
-...  
-providers: [  
-Appsflyer,  
-...,  
-]  
-```  
-and in your main ts file:  
-```  
-import { Appsflyer } from '@ionic-native/appsflyer/ngx';  
-import {Platform} from '@ionic/angular';  
-  
-constructor(private appsflyer: Appsflyer, public platform: Platform) { ...  
-this.platform.ready().then(() => {  
- this.appsflyer.initSdk(options); });}  
-```  
-####  Ionic 2/3  
-If you're using Ionic 2/3, you'd need to install a previous version of the Ionic Native dependency (notice the **@4** at the end of the npm install command):  
-```  
-$ ionic cordova plugin add cordova-plugin-appsflyer-sdk  
-$ npm install @ionic-native/appsflyer@4  
-```  
-Then add the following to `app.module.ts`(with no **/ngx**)  
-```  
-import { Appsflyer } from "@ionic-native/appsflyer";  
-...  
-providers: [  
-Appsflyer,  
-...,  
-]  
-```  
-And finally in your main ts file:  
-```  
-import { Appsflyer } from '@ionic-native/appsflyer';  
-```  
+
 Check out the full [API](/docs/API.md) for more information
